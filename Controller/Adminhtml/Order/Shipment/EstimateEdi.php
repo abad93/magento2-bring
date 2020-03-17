@@ -109,7 +109,7 @@ class EstimateEdi extends \Magento\Backend\App\Action
                 $bringAlternative = $prices['Product'];
                 $response = ['error' => false, 'message' => $bringAlternative['Price']['PackagePriceWithAdditionalServices'], 'request' => $priceRequest->toArray()];
             } else {
-                $response = ['error' => true, 'message' => implode("<br/>", $prices['TraceMessages'])];
+                $response = ['error' => true, 'message' => implode("<br/>", $prices['traceMessages'])];
             }
         } catch (\ContractValidationException $e) {
             $response = ['error' => true, 'message' => $e->getMessage(), 'type' => 'ContractValidationException'];

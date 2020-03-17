@@ -259,7 +259,7 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
             'fromCountry' => $request->getOrigCountryId(),
             'to' => null,
             'toCountry' => null,
-            'weightInGram' => null,
+            'weightInGrams' => null,
             'cart_total' => $request->getOrderSubtotal()
 
         ];
@@ -322,10 +322,10 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
         foreach ($custom_prices as $item) {
             $add = true;
             if ($item['min_weight']) {
-                $add &= $item['min_weight'] <= $data['weightInGram'];
+                $add &= $item['min_weight'] <= $data['weightInGrams'];
             }
             if ($item['max_weight']) {
-                $add &= $item['max_weight'] >= $data['weightInGram'];
+                $add &= $item['max_weight'] >= $data['weightInGrams'];
             }
 
             if (isset($item['country']) && $item['country']) {
@@ -365,15 +365,36 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
             $result = $this->_rateResultFactory->create();
             /** @var \Markant\Bring\Model\BookingClientService $clientFactory */
             $clientFactory = $this->_bookingClient->create();
+$items = array();
 
-            $containers = $clientFactory->getShippingContainers($request->getAllItems());
+foreach($request->getAllItems() as $item){
+    if($item->getProductType() == "simple"){
+        $items[] = $item;
+    }
+}
 
-            $data = $this->hydrateRequestData();
-            // Weight in gram of all packages.
-            $data['weightInGram'] = 0;
-            foreach ($containers as $container) {
-                $data['weightInGram'] += $container->getWeight() * 1000;
-            }
+            $containers = $clientFactory->getShippingContainers($items);
+
+        $data = $this->hydrateRequestData();
+        // Weight in gram of all packages.
+        $data['weightInGrams'] = 0;
+        foreach ($containers as $container) {
+            $data['weightInGrams'] += $container->getWeight() * 1000;
+        }
+//start kloner custom
+        $nb_of_coli = 1;
+
+
+if($data['weightInGrams'] > 35000 ){
+
+    $nb_of_coli = ceil($data['weightInGrams']/35000);
+
+    $data['weightInGrams'] = ceil($data['weightInGrams'] / $nb_of_coli);
+
+}
+
+//end kloner custom
+
 
 
             $preFabricatedMethods = $this->generateOfflineBringShippingMethods($data);
@@ -390,7 +411,9 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
                 foreach ($containers as $container) {
                     $priceRequest = new PriceRequest();
                     $priceRequest
-                        ->setWeightInGrams($container->getWeight() * 1000)
+                        //->setWeightInGrams($container->getWeight() * 1000)
+                    ->setWeightInGrams($data['weightInGrams'])
+                    
                         ->setEdi($this->getConfig('edi'))
                         ->setFromCountry(strtoupper($data['fromCountry']))
                         ->setFrom($data['from'])
@@ -413,6 +436,13 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
 
 
                     try {
+
+
+$writer = new \Zend\Log\Writer\Stream(BP . '/var/log/bring.log');
+$logger = new \Zend\Log\Logger();
+$logger->addWriter($writer);
+$logger->info('priceRequest'); // Simple Text Log
+$logger->info('Array Log'.print_r($priceRequest, true));
 
 
                         $json = $client->getPrices($priceRequest);
@@ -439,7 +469,7 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
                                                 $AmountWithVAT = $bringAlternative['price']['listPrice']['priceWithAdditionalServices']['amountWithVAT'];
 
                                             $shippingPrice = $this->getFinalPriceWithHandlingFee($AmountWithVAT);
-
+$shippingPrice = $shippingPrice *  $nb_of_coli;
                                             // Support coupons codes giving free shipping.. If coupons is added that gives free shipping - price is free...
                                             $shippingPrice = ceil($shippingPrice);
 
@@ -547,7 +577,7 @@ class Carrier extends \Magento\Shipping\Model\Carrier\AbstractCarrier implements
                         $valueToTest = null;
                         switch ($rule['rule']) {
                             case RuleType::CART_WEIGHT:
-                                $valueToTest = $hydratedRequestData['weightInGram'] / 1000;
+                                $valueToTest = $hydratedRequestData['weightInGrams'] / 1000;
                                 break;
                             case RuleType::CART_TOTAL:
                                 $valueToTest = $hydratedRequestData['cart_total'];
