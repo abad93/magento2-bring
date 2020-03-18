@@ -105,9 +105,9 @@ class EstimateEdi extends \Magento\Backend\App\Action
 
             $prices = $client->getPrices($priceRequest);
 
-            if (isset($prices['Product'])) {
-                $bringAlternative = $prices['Product'];
-                $response = ['error' => false, 'message' => $bringAlternative['Price']['PackagePriceWithAdditionalServices'], 'request' => $priceRequest->toArray()];
+            if (isset($prices['consignments']['products'])) {
+                $bringAlternative = $prices['consignments']['products'];
+                $response = ['error' => false, 'message' => $bringAlternative['price']['listPrice']['priceWithAdditionalServices'], 'request' => $priceRequest->toArray()];
             } else {
                 $response = ['error' => true, 'message' => implode("<br/>", $prices['traceMessages'])];
             }
